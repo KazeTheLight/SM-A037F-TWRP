@@ -142,7 +142,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: workspace/out
-          key: twrp-out-${{ runner.os }}-${{ github.ref_name }}-${{ inputs.assets }}-${{ steps.source.outputs.hash }}-${{ github.run_id }}
+          key: twrp-out-${{ runner.os }}-${{ github.ref_name }}-${{ inputs.assets }}-${{ steps.source.outputs.hash }}
           restore-keys: |
             twrp-out-${{ runner.os }}-${{ github.ref_name }}-${{ inputs.assets }}-${{ steps.source.outputs.hash }}-
 
@@ -194,7 +194,7 @@ jobs:
         continue-on-error: true
         with:
           path: workspace/out
-          key: twrp-out-${{ runner.os }}-${{ github.ref_name }}-${{ inputs.assets }}-${{ steps.source.outputs.hash }}-${{ github.run_id }}
+          key: twrp-out-${{ runner.os }}-${{ github.ref_name }}-${{ inputs.assets }}-${{ steps.source.outputs.hash }}
 
       - name: Check and package image
         working-directory: ${{ github.workspace }}/workspace
