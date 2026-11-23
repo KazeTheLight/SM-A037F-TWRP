@@ -77,15 +77,76 @@ partition currently contains TWRP, not the stock CYE1 recovery.
 
 ## Limitations
 
-- **FBE `/data` cannot be decrypted.** `TW_INCLUDE_CRYPTO` is disabled because
-  Samsung's FBE keymaster stack is not available in this recovery build.
-  Internal storage appears as raw/encrypted. Use a microSD card or USB OTG for
-  backups, or format data (which erases it) before relying on `/data`.
+- **FBE `/data` cannot be decrypted.** See
+  [Data encryption (FBE)](#data-encryption-fbe) for the two supported routes.
 - Python and NTFS support are disabled to keep `recovery.img` below the
   38,797,312-byte recovery partition.
 - The image is signed with AOSP test keys. An unlocked bootloader is required.
 - Tested only on SM-A037F. Do not flash on A03s variants with a different
   partition layout without checking the sizes first.
+
+## Data encryption (FBE)
+
+The device ships with file-based encryption:
+
+- `/data` uses `fileencryption=aes-256-xts:aes-256-cts:v2`
+- FBE key directory: `/metadata/vold/metadata_encryption`
+- Keystore: Samsung `mdfpp` on TEEGRIS
+
+`TW_INCLUDE_CRYPTO` is off, so TWRP cannot unwrap the FBE key and `/data`
+appears empty. This matches the other Samsung MTK recovery trees (A12, A05,
+A15), none of which provide working FBE decryption for this platform.
+
+There are two practical choices.
+
+### Keep FBE
+
+Use TWRP for boot/recovery/dtbo/EFS/super backups and flashing only. Back up
+internal storage with `adb pull /sdcard`, and app data from the booted, rooted
+Android system, for example:
+
+```bash
+adb exec-out su -c 'tar -C /data --exclude=data/media -cf - .' > data-apps.tar
+```
+
+`/data` stays encrypted and TWRP will not mount it.
+
+### Disable FBE (erases data)
+
+This is the standard Samsung MTK route and what the A12/A05 trees document:
+
+1. Back up everything; this wipes `/data`.
+2. Flash TWRP and boot it.
+3. **Wipe -> Format Data** (not just "Wipe").
+4. Open **Advanced -> Terminal** and run:
+
+   ```sh
+   multidisabler
+   ```
+
+   The script is already in this build at `/system/bin/multidisabler`. It
+   replaces `fileencryption=...` with `encryptable` in
+   `/vendor/etc/fstab.mt6765`, disables stock recovery restoration and makes
+   `/vendor` writable if the filesystem is full.
+5. Reboot to Android. The first boot creates a new unencrypted `/data`.
+
+After this, TWRP can mount `/data`, and Android will not re-encrypt it.
+
+Notes:
+
+- Formatting data is irreversible.
+- Knox, Secure Folder, some banking apps and OTA updates may complain. A vendor
+  OTA can restore the original fstab and re-enable FBE; the procedure then has
+  to be repeated.
+- This does not decrypt existing data. It only makes future `/data`
+  unencrypted.
+- If `multidisabler` cannot write to `/vendor`, patch the fstab manually from
+  the TWRP terminal:
+
+  ```sh
+  mount -o rw /vendor
+  sed -i 's/fileencryption=[^,]*/encryptable/' /vendor/etc/fstab.mt6765
+  ```
 
 ## Build with GitHub Actions
 
