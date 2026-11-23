@@ -131,8 +131,8 @@ TARGET_USERIMAGES_USE_F2FS := true
 TARGET_RECOVERY_PIXEL_FORMAT := "BGRA_8888"
 BOARD_SUPPRESS_SECURE_ERASE := true
 
-# Android Verified Boot
-BOARD_AVB_ENABLE := true
+# Android Verified Boot (unsigned recovery; bootloader is unlocked)
+BOARD_AVB_ENABLE := false
 BOARD_AVB_ALGORITHM := SHA512_RSA4096
 BOARD_AVB_KEY_PATH := external/avb/test/data/testkey_rsa4096.pem
 BOARD_AVB_RECOVERY_KEY_PATH := external/avb/test/data/testkey_rsa4096.pem
