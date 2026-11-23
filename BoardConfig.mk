@@ -151,6 +151,13 @@ TW_INCLUDE_FBE_METADATA_DECRYPT := true
 BOARD_USES_METADATA_PARTITION := true
 BOARD_ROOT_EXTRA_FOLDERS += metadata
 
+# Crypto recovery links libresetprop, but that module installs to system/lib64.
+# Make the copy-to-recovery module a dependency of the recovery binary so it
+# runs before the ramdisk is packed.
+ifeq ($(TW_INCLUDE_CRYPTO), true)
+TWRP_REQUIRED_MODULES += twrp_libresetprop
+endif
+
 # TWRP specific build flags
 RECOVERY_SDCARD_ON_DATA := true
 RECOVERY_VARIANT := twrp
