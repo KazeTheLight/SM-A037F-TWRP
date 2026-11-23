@@ -23,20 +23,25 @@ on init
 # display and log are up.
 
 on property:hwservicemanager.ready=true & property:ro.crypto.state=encrypted
+    write /cache/fbe-debug/03-crypto-trigger 1
     mount ext4 /dev/block/mapper/vendor /vendor ro
     start tz_service
+    write /cache/fbe-debug/04-tz-start 1
 
 on property:vendor.tzdaemon=Ready
+    write /cache/fbe-debug/05-tz-ready 1
     setprop vendor.TEEGRIS.loaded true
     write /proc/iccc_ready 1
     start tzts_service
 
 on property:vendor.tzts_daemon=Ready
+    write /cache/fbe-debug/06-tzts-ready 1
     start kgtaserv
     start vendor.gatekeeper-1-0
     start vendor.keymaster-4-0
     stop keystore2
     start keystore2
+    write /cache/fbe-debug/07-keymaster-start 1
 
 on property:twrp.all.users.decrypted=true
     setprop crypto.ready 0
