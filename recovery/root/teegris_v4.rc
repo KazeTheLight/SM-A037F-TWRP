@@ -1,6 +1,7 @@
 # TEEGRIS + Samsung keymaster/gatekeeper for TWRP FBE
 # Based on the stock A03s vendor teegris_v4.rc and the A14m TWRP tree.
 
+import /system/etc/init/servicemanager.rc
 import /system/etc/init/hwservicemanager.rc
 import /system/etc/init/vndservicemanager.rc
 import /system/etc/init/keystore2.rc
@@ -17,18 +18,9 @@ on init
     mkdir /tmp/misc 0770 system system
     mkdir /tmp/misc/keystore 0770 system system
 
-on post-fs
-    mount ext4 /dev/block/by-name/protect1 /mnt/vendor/protect_f rw
-    mount ext4 /dev/block/by-name/protect2 /mnt/vendor/protect_s rw
-    mount ext4 /dev/block/by-name/nvcfg /mnt/vendor/nvcfg rw
-    mount ext4 /dev/block/by-name/nvdata /mnt/vendor/nvdata rw
-    mount ext4 /dev/block/by-name/efs /mnt/vendor/efs rw
-    mount ext4 /dev/block/by-name/persist /mnt/vendor/persist rw
-
-    chown system system /mnt/vendor/efs
-    mkdir /mnt/vendor/efs/tee 0700 system system
-    mkdir /mnt/vendor/efs/DAK 0775 system system
-    chown system system /mnt/vendor/efs/DAK
+# Vendor mounts are intentionally deferred until after the recovery UI.
+# Mounting efs/protect/nv/persist in on post-fs can block TWRP before the
+# display and log are up.
 
 on property:hwservicemanager.ready=true & property:ro.crypto.state=encrypted
     mount ext4 /dev/block/mapper/vendor /vendor ro
