@@ -236,12 +236,20 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Create release tag
+        if: ${{ inputs.create_release }}
+        working-directory: device-tree
+        env:
+          RELEASE_TAG: twrp-${{ github.run_number }}-${{ github.run_attempt }}
+        run: |
+          git tag -f "$RELEASE_TAG" "$GITHUB_SHA"
+          git push --force origin "refs/tags/$RELEASE_TAG"
+
       - name: Publish release
         if: ${{ inputs.create_release }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: twrp-${{ github.run_number }}-${{ github.run_attempt }}
-          target_commitish: ${{ github.sha }}
           name: TWRP a03s build ${{ github.run_number }}
           prerelease: true
           body: |
