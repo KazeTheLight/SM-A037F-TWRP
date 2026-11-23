@@ -175,9 +175,9 @@ jobs:
           body: |
             TWRP 12.1 for Samsung Galaxy A03s (SM-A037F)
 
-            - Firmware target: A037FXXS8CYE1 (Android 13, 2025-05-01)
+            - Firmware target: A037FXXS8CYE1 (system properties)
             - Assets: ${{ inputs.assets }}
-            - DTB: stock A037FXXS8CYE1
+            - Kernel/DTB/DTBO: selected prebuilt set (see README)
             - Commit: ${{ github.sha }}
 
             Flash `recovery.tar` with Odin (AP slot) or `recovery.img` with Heimdall.
