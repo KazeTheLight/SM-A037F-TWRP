@@ -1,4 +1,5 @@
-import /teegris_v4.rc
+# teegris disabled during splash-hang isolation (build 12)
+# import /teegris_v4.rc
 
 on init
     setprop sys.usb.configfs 1
@@ -11,12 +12,7 @@ on fs && property:ro.debuggable=0
     start adbd
 
 on post-fs
-    # Best-effort persistent markers on /cache. Init mount/write only: no exec,
-    # so a failing marker can never block the recovery service from starting.
-    mkdir /cache 0770 root root
-    mount ext4 /dev/block/by-name/cache /cache rw
-    mkdir /cache/fbe-debug 0770 root root
-    write /cache/fbe-debug/01-post-fs 1
+    # kmsg-only marker; no early cache mount while isolating the splash hang.
     write /dev/kmsg "FBE: post-fs"
 
     # Support A/B feature for emmc boot region
@@ -33,11 +29,14 @@ on init
     write /proc/sys/kernel/hung_task_timeout_secs 0
 
 on boot
-     write /cache/fbe-debug/08-boot 1
      write /dev/kmsg "FBE: boot"
      start vendor.boot-hal-1-2
      start health-hal-2-1
 
 on property:init.svc.recovery=running
-     write /cache/fbe-debug/09-recovery-running 1
      write /dev/kmsg "FBE: recovery-running"
+
+# keystore2 starts from late-init before keymaster is available. For this
+# isolation build, stop it so TWRP cannot block waiting for it.
+on property:init.svc.keystore2=running
+     stop keystore2
