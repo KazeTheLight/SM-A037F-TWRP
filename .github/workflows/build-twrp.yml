@@ -136,14 +136,6 @@ jobs:
         run: |
           echo "Dirty build: ${{ inputs.dirty_build }}; assets: ${{ inputs.assets }}"
 
-      - name: Restore ccache
-        uses: actions/cache@v4
-        with:
-          path: .ccache
-          key: ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            ccache-${{ runner.os }}-${{ github.ref_name }}-
-
       - name: Restore previous build output
         if: ${{ inputs.dirty_build }}
         id: out_cache
@@ -171,14 +163,6 @@ jobs:
             echo "No previous out/ restored; this will be a full build."
           fi
 
-      - name: Configure ccache
-        run: |
-          export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
-          mkdir -p "$CCACHE_DIR"
-          test -w "$CCACHE_DIR"
-          ccache -M 1G
-          ccache -z
-
       - name: Build recovery
         working-directory: ${{ github.workspace }}/workspace
         run: |
@@ -187,10 +171,6 @@ jobs:
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
           export TZ=UTC
-          export USE_CCACHE=1
-          export CCACHE_EXEC="$(command -v ccache)"
-          export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
-          export CCACHE_MAXSIZE=1G
           lunch twrp_a03s-eng
           mka recoveryimage 2>&1 | tee build.log
 
