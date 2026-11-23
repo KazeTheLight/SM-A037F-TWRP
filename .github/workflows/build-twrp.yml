@@ -139,7 +139,7 @@ jobs:
       - name: Restore ccache
         uses: actions/cache@v4
         with:
-          path: ~/.ccache
+          path: .ccache
           key: ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
             ccache-${{ runner.os }}-${{ github.ref_name }}-
@@ -173,7 +173,9 @@ jobs:
 
       - name: Configure ccache
         run: |
-          mkdir -p "$HOME/.ccache"
+          export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
+          mkdir -p "$CCACHE_DIR"
+          test -w "$CCACHE_DIR"
           ccache -M 1G
           ccache -z
 
@@ -187,7 +189,7 @@ jobs:
           export TZ=UTC
           export USE_CCACHE=1
           export CCACHE_EXEC="$(command -v ccache)"
-          export CCACHE_DIR="$HOME/.ccache"
+          export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
           export CCACHE_MAXSIZE=1G
           lunch twrp_a03s-eng
           mka recoveryimage 2>&1 | tee build.log
