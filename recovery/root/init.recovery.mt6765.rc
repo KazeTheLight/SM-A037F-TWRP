@@ -1,5 +1,4 @@
-# teegris disabled during splash-hang isolation (build 12)
-# import /teegris_v4.rc
+import /teegris_v4.rc
 
 on init
     setprop sys.usb.configfs 1
@@ -35,8 +34,3 @@ on boot
 
 on property:init.svc.recovery=running
      write /dev/kmsg "FBE: recovery-running"
-
-# keystore2 starts from late-init before keymaster is available. For this
-# isolation build, stop it so TWRP cannot block waiting for it.
-on property:init.svc.keystore2=running
-     stop keystore2

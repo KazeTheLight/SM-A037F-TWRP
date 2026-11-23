@@ -1,10 +1,5 @@
 # TEEGRIS + Samsung keymaster/gatekeeper for TWRP FBE
-# Based on the stock A03s vendor teegris_v4.rc and the A14m TWRP tree.
-
-import /system/etc/init/servicemanager.rc
-import /system/etc/init/hwservicemanager.rc
-import /system/etc/init/vndservicemanager.rc
-import /system/etc/init/keystore2.rc
+# Adapted from forforksake/recovery_device_samsung_a14m (MT6768 TWRP).
 
 on init
     mkdir /mnt/vendor/efs 0771 system system
@@ -18,39 +13,70 @@ on init
     mkdir /tmp/misc 0770 system system
     mkdir /tmp/misc/keystore 0770 system system
 
-# Vendor mounts are intentionally deferred until after the recovery UI.
-# Mounting efs/protect/nv/persist in on post-fs can block TWRP before the
-# display and log are up.
+on post-fs
+    # TEEGRIS/keymaster read these partitions before the recovery UI starts.
+    chown system system /mnt/vendor/protect_f
+    restorecon /mnt/vendor/protect_f
+    mount ext4 /dev/block/by-name/protect1 /mnt/vendor/protect_f rw
 
-on property:hwservicemanager.ready=true
-    write /cache/fbe-debug/02-hw-ready 1
-    write /dev/kmsg "FBE: hw-ready"
+    chown system system /mnt/vendor/protect_s
+    restorecon /mnt/vendor/protect_s
+    mount ext4 /dev/block/by-name/protect2 /mnt/vendor/protect_s rw
 
+    chown system system /mnt/vendor/nvcfg
+    restorecon /mnt/vendor/nvcfg
+    mount ext4 /dev/block/by-name/nvcfg /mnt/vendor/nvcfg rw
+    restorecon_recursive /mnt/vendor/nvcfg
+
+    chown root system /mnt/vendor/nvdata
+    restorecon /mnt/vendor/nvdata
+    mount ext4 /dev/block/by-name/nvdata /mnt/vendor/nvdata rw
+    restorecon_recursive /mnt/vendor/nvdata
+
+    chown system system /mnt/vendor/efs
+    restorecon /mnt/vendor/efs
+    mount ext4 /dev/block/by-name/efs /mnt/vendor/efs rw
+    restorecon_recursive /mnt/vendor/efs
+
+    chown system system /mnt/vendor/persist
+    restorecon /mnt/vendor/persist
+    mount ext4 /dev/block/by-name/persist /mnt/vendor/persist rw
+
+    mkdir /mnt/vendor/efs/tee 0700 system system
+    mkdir /mnt/vendor/efs/DAK 0775 system system
+    chown system system /mnt/vendor/efs/DAK/gakkeybox
+    chmod 0644 /mnt/vendor/efs/DAK/gakkeybox
+    write /dev/kmsg "FBE: vendor mounts done"
+
+# Start everything together, like the a14m reference. Waiting for
+# vendor.tzdaemon Ready here can block TWRP forever if TEEGRIS fails.
 on property:hwservicemanager.ready=true & property:ro.crypto.state=encrypted
-    write /cache/fbe-debug/03-crypto-trigger 1
     write /dev/kmsg "FBE: crypto-trigger"
-    mount ext4 /dev/block/mapper/vendor /vendor ro
     start tz_service
-    write /cache/fbe-debug/04-tz-start 1
-    write /dev/kmsg "FBE: tz-start"
-
-on property:vendor.tzdaemon=Ready
-    write /cache/fbe-debug/05-tz-ready 1
-    write /dev/kmsg "FBE: tz-ready"
     setprop vendor.TEEGRIS.loaded true
     write /proc/iccc_ready 1
     start tzts_service
-
-on property:vendor.tzts_daemon=Ready
-    write /cache/fbe-debug/06-tzts-ready 1
-    write /dev/kmsg "FBE: tzts-ready"
-    start kgtaserv
     start vendor.gatekeeper-1-0
     start vendor.keymaster-4-0
-    stop keystore2
     start keystore2
-    write /cache/fbe-debug/07-keymaster-start 1
     write /dev/kmsg "FBE: keymaster-start"
+
+# Fallback if ro.crypto.state is not set to encrypted early enough.
+on property:init.svc.recovery=running
+    start tz_service
+    setprop vendor.TEEGRIS.loaded true
+    write /proc/iccc_ready 1
+    start tzts_service
+    start vendor.gatekeeper-1-0
+    start vendor.keymaster-4-0
+    start keystore2
+
+on property:vendor.tzdaemon=Ready
+    start tzts_service
+
+on property:vendor.tzts_daemon=Ready
+    start vendor.gatekeeper-1-0
+    start vendor.keymaster-4-0
 
 on property:twrp.all.users.decrypted=true
     setprop crypto.ready 0
@@ -75,6 +101,7 @@ service vendor.gatekeeper-1-0 /vendor/bin/hw/android.hardware.gatekeeper@1.0-ser
     class hal
     user root
     group system 5678
+    disabled
     seclabel u:r:recovery:s0
 
 service vendor.keymaster-4-0 /vendor/bin/hw/android.hardware.keymaster@4.0-service
@@ -82,6 +109,7 @@ service vendor.keymaster-4-0 /vendor/bin/hw/android.hardware.keymaster@4.0-servi
     class early_hal
     user root
     group system drmrpc
+    disabled
     seclabel u:r:recovery:s0
 
 service kgtaserv /vendor/bin/hw/vendor.samsung.hardware.tlc.kg@1.1-service

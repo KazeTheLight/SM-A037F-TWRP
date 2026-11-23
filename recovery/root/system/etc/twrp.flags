@@ -2,7 +2,7 @@
 
 # Physical partitions
 /cache          ext4        /dev/block/by-name/cache        flags=backup=0;display="Cache"
-/data           f2fs        /dev/block/by-name/userdata     flags=length=-16384;fileencryption=aes-256-xts:aes-256-cts:v2;keydirectory=/metadata/vold/metadata_encryption
+/data           f2fs        /dev/block/by-name/userdata     flags=backup=1;display="Data"
 /efs            ext4        /dev/block/by-name/sec_efs      flags=backup=1;display="Efs"
 /metadata       ext4        /dev/block/by-name/md_udc       flags=backup=1;display="Metadata"
 /misc           emmc        /dev/block/by-name/misc         flags=backup=0;display="Misc"
