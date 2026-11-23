@@ -17,6 +17,11 @@ on:
         required: true
         type: boolean
         default: true
+      dirty_build:
+        description: "Reuse the previous out/ cache (incremental build, faster)"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -88,6 +93,15 @@ jobs:
           cd workspace
           repo init --depth=1 -u "$MANIFEST_URL" -b "$MANIFEST_BRANCH"
           repo sync -c -j"$(nproc --all)" --force-sync --no-tags
+
+      - name: Record source revision
+        id: source
+        working-directory: ${{ github.workspace }}/workspace
+        run: |
+          set -eo pipefail
+          HASH=$({ repo forall -c 'git rev-parse HEAD'; git -C .repo/manifests rev-parse HEAD; } | sort | sha256sum | cut -d' ' -f1)
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+          echo "Source hash: $HASH"
           rm -rf .repo
 
       - name: Install device tree
@@ -118,6 +132,51 @@ jobs:
           esac
           sha256sum Image recovery.img-dtb recovery_dtbo
 
+      - name: Build mode
+        run: |
+          echo "Dirty build: ${{ inputs.dirty_build }}; assets: ${{ inputs.assets }}"
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ github.ref_name }}-
+
+      - name: Restore previous build output
+        if: ${{ inputs.dirty_build }}
+        id: out_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: workspace/out
+          key: twrp-out-${{ runner.os }}-${{ github.ref_name }}-${{ inputs.assets }}-${{ steps.source.outputs.hash }}-${{ github.run_id }}
+          restore-keys: |
+            twrp-out-${{ runner.os }}-${{ github.ref_name }}-${{ inputs.assets }}-${{ steps.source.outputs.hash }}-
+
+      - name: Prepare dirty build
+        if: ${{ inputs.dirty_build }}
+        run: |
+          set -eo pipefail
+          if [ -d workspace/out ]; then
+            du -sh workspace/out || true
+            rm -f "workspace/out/target/product/$DEVICE/recovery.img" \
+                  "workspace/out/target/product/$DEVICE/recovery.tar" \
+                  "workspace/out/target/product/$DEVICE/SHA256SUMS.txt"
+            echo "Reusing previous out/; touching source mtimes..."
+            ( cd workspace && find . -path ./out -prune -o -type f -exec touch -t 200001010000.00 {} + )
+            ( cd workspace && find "device/samsung/a03s" -type f -exec touch {} + )
+            echo "Dirty build prepared."
+          else
+            echo "No previous out/ restored; this will be a full build."
+          fi
+
+      - name: Configure ccache
+        run: |
+          mkdir -p "$HOME/.ccache"
+          ccache -M 1G
+          ccache -z
+
       - name: Build recovery
         working-directory: ${{ github.workspace }}/workspace
         run: |
@@ -126,8 +185,33 @@ jobs:
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
           export TZ=UTC
+          export USE_CCACHE=1
+          export CCACHE_EXEC="$(command -v ccache)"
+          export CCACHE_DIR="$HOME/.ccache"
+          export CCACHE_MAXSIZE=1G
           lunch twrp_a03s-eng
           mka recoveryimage 2>&1 | tee build.log
+
+      - name: Measure build output
+        id: out_size
+        if: success()
+        run: |
+          SIZE=$(du -sm workspace/out | cut -f1)
+          echo "out size: ${SIZE} MB"
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+          if [ "$SIZE" -le 12000 ]; then
+            echo "save=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "save=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save build output cache
+        if: ${{ success() && steps.out_size.outputs.save == 'true' }}
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: workspace/out
+          key: twrp-out-${{ runner.os }}-${{ github.ref_name }}-${{ inputs.assets }}-${{ steps.source.outputs.hash }}-${{ github.run_id }}
 
       - name: Check and package image
         working-directory: ${{ github.workspace }}/workspace
@@ -177,6 +261,7 @@ jobs:
 
             - Firmware target: A037FXXS8CYE1 (system properties)
             - Assets: ${{ inputs.assets }}
+            - Dirty build: ${{ inputs.dirty_build }}
             - Kernel/DTB/DTBO: selected prebuilt set (see README)
             - Commit: ${{ github.sha }}
 
