@@ -181,10 +181,11 @@ jobs:
           SIZE=$(du -sm workspace/out | cut -f1)
           echo "out size: ${SIZE} MB"
           echo "size=$SIZE" >> "$GITHUB_OUTPUT"
-          if [ "$SIZE" -le 12000 ]; then
+          if [ "$SIZE" -le 14000 ]; then
             echo "save=true" >> "$GITHUB_OUTPUT"
           else
             echo "save=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::out/ is ${SIZE} MB; cache checkpoint skipped (limit 14000 MB)"
           fi
 
       - name: Save build output cache
