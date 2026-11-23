@@ -23,6 +23,10 @@ on post-fs
 
 on fs
     export ANDROID_ROOT /system_root
+    # Bring adb up as soon as the USB gadget exists, before the TWRP UI.
+    setprop sys.usb.config adb
+    start adbd
+    write /dev/kmsg "FBE: adb-early"
 
 on init
     write /proc/sys/kernel/hung_task_timeout_secs 0
