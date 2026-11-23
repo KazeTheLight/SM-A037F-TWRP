@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+*.bin binary
+*.img binary
+*.dtb binary
+*.dtbo binary
+Image binary
+Image.* binary
+prebuilt/recovery.img-dtb* binary
+prebuilt/recovery_dtbo* binary
