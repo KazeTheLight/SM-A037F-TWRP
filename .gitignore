@@ -1,3 +1,4 @@
 out/
+.ccache/
 build.log
 *.img.sha256
