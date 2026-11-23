@@ -10,6 +10,12 @@ installed on the test device, **A037FXXS8CYE1 (Android 13)**.
 > decrypt the FBE-encrypted `/data` partition. Back up everything before
 > flashing and keep a copy of the stock firmware.
 
+> **FBE experimental branch**
+> This branch enables `TW_INCLUDE_CRYPTO`/`TW_INCLUDE_CRYPTO_FBE` and starts
+> Samsung TEEGRIS, keymaster 4.0 and gatekeeper 1.0 in recovery. The goal is to
+> unlock the existing FBE `/data` without formatting it. This is experimental;
+> the non-crypto `main` branch remains the safe build.
+
 ## Device
 
 | Item | Value |
@@ -93,11 +99,31 @@ The device ships with file-based encryption:
 - FBE key directory: `/metadata/vold/metadata_encryption`
 - Keystore: Samsung `mdfpp` on TEEGRIS
 
-`TW_INCLUDE_CRYPTO` is off, so TWRP cannot unwrap the FBE key and `/data`
-appears empty. This matches the other Samsung MTK recovery trees (A12, A05,
-A15), none of which provide working FBE decryption for this platform.
+`main` builds with `TW_INCLUDE_CRYPTO` off, so TWRP cannot unwrap the FBE key
+and `/data` appears empty. This matches the other Samsung MTK recovery trees
+(A12, A05, A15), none of which provide working FBE decryption for this platform.
 
-There are two practical choices.
+### FBE experimental build (`fbe-experimental`)
+
+This branch enables `TW_INCLUDE_CRYPTO`, `TW_INCLUDE_CRYPTO_FBE` and
+`TW_INCLUDE_FBE_METADATA_DECRYPT`, and starts the Samsung stack from
+`recovery/root/teegris_v4.rc`:
+
+- mounts `/mnt/vendor/efs`, `protect1/2`, `nvcfg`, `nvdata` and `persist`
+- starts `tzdaemon` / `tzts_daemon` (TEEGRIS)
+- sets `vendor.TEEGRIS.loaded=1`
+- starts `vendor.gatekeeper-1.0` and `vendor.keymaster-4.0`
+- restarts `keystore2` after keymaster is ready
+
+The TEEGRIS daemons were verified to start in the existing TWRP recovery. The
+keymaster/gatekeeper HALs previously failed on TWRP 11 because its
+`libhwbinder` lacks `Parcel::markSensitive`; TWRP 12.1 has that symbol.
+
+Test it **without formatting data**. If the HALs initialize, TWRP should ask
+for the lock and mount `/data`. If it still fails, use the `main` build and the
+`multidisabler` route below.
+
+There are two practical choices for encrypted `/data` on `main`.
 
 ### Keep FBE
 

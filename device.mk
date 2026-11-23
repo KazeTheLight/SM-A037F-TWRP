@@ -19,12 +19,6 @@ PRODUCT_USE_DYNAMIC_PARTITIONS := true
 PRODUCT_ENFORCE_PRODUCT_PARTITION_INTERFACE := true
 PRODUCT_PRODUCT_VNDK_VERSION := current
 
-# fastbootd
-PRODUCT_PACKAGES += \
-	android.hardware.fastboot@1.0-impl-mock \
-	android.hardware.fastboot@1.0-impl-mock.recovery \
-	fastbootd
-
 # bootctrl
 PRODUCT_PACKAGES += \
     android.hardware.boot@1.2-impl \

@@ -1,0 +1,89 @@
+# TEEGRIS + Samsung keymaster/gatekeeper for TWRP FBE
+# Based on the stock A03s vendor teegris_v4.rc and the A14m TWRP tree.
+
+import /system/etc/init/hwservicemanager.rc
+import /system/etc/init/vndservicemanager.rc
+import /system/etc/init/keystore2.rc
+
+on init
+    mkdir /mnt/vendor/efs 0771 system system
+    mkdir /mnt/vendor/persist 0771 root root
+    mkdir /mnt/vendor/protect_f 0770 root root
+    mkdir /mnt/vendor/protect_s 0770 root root
+    mkdir /mnt/vendor/nvcfg 0771 root root
+    mkdir /mnt/vendor/nvdata 0771 root root
+    mkdir /dev/socket/iwt 0770 system system
+    mkdir /dev/socket/iwt/ca 0770 system system
+    mkdir /tmp/misc 0770 system system
+    mkdir /tmp/misc/keystore 0770 system system
+
+on post-fs
+    mount ext4 /dev/block/by-name/protect1 /mnt/vendor/protect_f rw
+    mount ext4 /dev/block/by-name/protect2 /mnt/vendor/protect_s rw
+    mount ext4 /dev/block/by-name/nvcfg /mnt/vendor/nvcfg rw
+    mount ext4 /dev/block/by-name/nvdata /mnt/vendor/nvdata rw
+    mount ext4 /dev/block/by-name/efs /mnt/vendor/efs rw
+    mount ext4 /dev/block/by-name/persist /mnt/vendor/persist rw
+
+    chown system system /mnt/vendor/efs
+    mkdir /mnt/vendor/efs/tee 0700 system system
+    mkdir /mnt/vendor/efs/DAK 0775 system system
+    chown system system /mnt/vendor/efs/DAK
+
+on property:hwservicemanager.ready=true & property:ro.crypto.state=encrypted
+    mount ext4 /dev/block/mapper/vendor /vendor ro
+    start tz_service
+
+on property:vendor.tzdaemon=Ready
+    setprop vendor.TEEGRIS.loaded true
+    write /proc/iccc_ready 1
+    start tzts_service
+
+on property:vendor.tzts_daemon=Ready
+    start kgtaserv
+    start vendor.gatekeeper-1-0
+    start vendor.keymaster-4-0
+    stop keystore2
+    start keystore2
+
+on property:twrp.all.users.decrypted=true
+    setprop crypto.ready 0
+    stop vendor.gatekeeper-1-0
+
+service tz_service /vendor/bin/tzdaemon
+    class core
+    user root
+    group root readproc
+    disabled
+    seclabel u:r:recovery:s0
+
+service tzts_service /vendor/bin/tzts_daemon
+    class core
+    user root
+    group root
+    disabled
+    seclabel u:r:recovery:s0
+
+service vendor.gatekeeper-1-0 /vendor/bin/hw/android.hardware.gatekeeper@1.0-service
+    interface android.hardware.gatekeeper@1.0::IGatekeeper default
+    class hal
+    user root
+    group system 5678
+    seclabel u:r:recovery:s0
+
+service vendor.keymaster-4-0 /vendor/bin/hw/android.hardware.keymaster@4.0-service
+    interface android.hardware.keymaster@4.0::IKeymasterDevice default
+    class early_hal
+    user root
+    group system drmrpc
+    seclabel u:r:recovery:s0
+
+service kgtaserv /vendor/bin/hw/vendor.samsung.hardware.tlc.kg@1.1-service
+    interface vendor.samsung.hardware.tlc.kg@1.0::ISehKg default
+    interface vendor.samsung.hardware.tlc.kg@1.1::ISehKg default
+    class hal
+    user root
+    group system
+    oneshot
+    disabled
+    seclabel u:r:recovery:s0

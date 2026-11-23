@@ -1,4 +1,4 @@
-name: Build TWRP
+name: Build TWRP FBE
 
 on:
   workflow_dispatch:
@@ -34,7 +34,7 @@ env:
 
 jobs:
   build:
-    name: TWRP 12.1 / ${{ inputs.assets }} assets
+    name: TWRP 12.1 FBE / ${{ inputs.assets }} assets
     runs-on: ubuntu-22.04
     timeout-minutes: 360
 
@@ -233,7 +233,7 @@ jobs:
       - name: Upload recovery artifact
         uses: actions/upload-artifact@v4
         with:
-          name: twrp-a03s-${{ github.run_number }}-${{ inputs.assets }}
+          name: twrp-a03s-fbe-${{ github.run_number }}-${{ inputs.assets }}
           path: |
             workspace/out/target/product/a03s/recovery.img
             workspace/out/target/product/a03s/recovery.tar
@@ -253,17 +253,21 @@ jobs:
         if: ${{ inputs.create_release }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: twrp-${{ github.run_number }}-${{ github.run_attempt }}
-          name: TWRP a03s build ${{ github.run_number }}
+          tag_name: twrp-fbe-${{ github.run_number }}-${{ github.run_attempt }}
+          name: TWRP a03s FBE build ${{ github.run_number }}
           prerelease: true
           body: |
-            TWRP 12.1 for Samsung Galaxy A03s (SM-A037F)
+            TWRP 12.1 FBE experimental build for Samsung Galaxy A03s (SM-A037F)
 
             - Firmware target: A037FXXS8CYE1 (system properties)
             - Assets: ${{ inputs.assets }}
             - Dirty build: ${{ inputs.dirty_build }}
             - Kernel/DTB/DTBO: selected prebuilt set (see README)
             - Commit: ${{ github.sha }}
+
+            This build enables TW_INCLUDE_CRYPTO/TW_INCLUDE_CRYPTO_FBE and starts
+            Samsung TEEGRIS + keymaster/gatekeeper in recovery. Test decryption
+            without formatting data first.
 
             Flash `recovery.tar` with Odin (AP slot) or `recovery.img` with Heimdall.
           files: |
