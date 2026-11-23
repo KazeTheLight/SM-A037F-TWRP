@@ -87,7 +87,7 @@ partition currently contains TWRP, not the stock CYE1 recovery.
   [Data encryption (FBE)](#data-encryption-fbe) for the two supported routes.
 - Python and NTFS support are disabled to keep `recovery.img` below the
   38,797,312-byte recovery partition.
-- The image is signed with AOSP test keys. An unlocked bootloader is required.
+- The image is unsigned. An unlocked bootloader is required.
 - Tested only on SM-A037F. Do not flash on A03s variants with a different
   partition layout without checking the sizes first.
 

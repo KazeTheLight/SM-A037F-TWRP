@@ -208,6 +208,10 @@ jobs:
             echo "::error::recovery.img exceeds the recovery partition"
             exit 1
           fi
+          if [ "$SIZE" -lt "$LIMIT" ]; then
+            truncate -s "$LIMIT" "$OUT/recovery.img"
+            echo "padded recovery.img to $LIMIT bytes"
+          fi
           ( cd "$OUT" && tar --format=ustar -cf recovery.tar recovery.img )
           ( cd "$OUT" && sha256sum recovery.img recovery.tar > SHA256SUMS.txt )
           ls -lh "$OUT/recovery.img" "$OUT/recovery.tar"
