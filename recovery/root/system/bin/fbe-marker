@@ -1,0 +1,18 @@
+#!/system/bin/sh
+# Persistent FBE boot marker. Writes only to /cache (scratch), then fsyncs.
+D=/cache/fbe-debug
+
+if ! grep -q ' /cache ' /proc/mounts 2>/dev/null; then
+    mkdir -p /cache 2>/dev/null
+    mount ext4 /dev/block/by-name/cache /cache rw 2>/dev/null
+fi
+
+mkdir -p "$D" 2>/dev/null
+
+if [ "$1" = "props" ]; then
+    getprop | grep -E 'init.svc.(servicemanager|hwservicemanager|vndservicemanager|keystore2|recovery)' > "$D/props" 2>/dev/null
+elif [ -n "$1" ]; then
+    echo "$1" >> "$D/markers" 2>/dev/null
+fi
+
+sync
