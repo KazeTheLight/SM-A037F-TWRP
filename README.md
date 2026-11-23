@@ -192,8 +192,8 @@ The workflow is `.github/workflows/build-twrp.yml`.
 
 The workflow can reuse the previous build output and ccache:
 
-1. Run once with **Dirty build** off. A successful build saves `out/` and the
-   ccache to the GitHub Actions cache.
+1. Run once with **Dirty build** off. A successful build saves `out/` to the
+   GitHub Actions cache.
 2. Run again with **Dirty build** on. The workflow restores `out/`, sets the
    source mtimes older than the cached objects, touches the device tree so
    configuration changes rebuild, removes the old `recovery.img`, and runs
@@ -202,8 +202,8 @@ The workflow can reuse the previous build output and ccache:
    source moved, the cache is not reused and the build is clean again.
 
 GitHub Actions has a 10 GB cache limit per repository. If `out/` is too large,
-the cache save is skipped and the build still succeeds; the ccache cache still
-helps. If the restored cache looks stale, run once with **Dirty build** off.
+the cache save is skipped and the build still succeeds. If the restored cache
+looks stale, run once with **Dirty build** off.
 
 The job syncs the TWRP 12.1 minimal manifest, removes `.repo` to free disk
 space, copies this device tree to `device/samsung/a03s`, builds
